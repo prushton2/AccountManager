@@ -1,0 +1,13 @@
+Accounts:
+  ID:
+    -Name - string
+    -Password - string - (sha256)
+    -Email - string - (sendgrid)
+    -APIKeys - string[] - (ids)
+    -createdAt - unixInt
+    -allowedAPIKeys - string[]
+
+APIKeys:
+  ID:
+    -Name - string (key name, not owner)
+    -allowedOrigins - string[]
