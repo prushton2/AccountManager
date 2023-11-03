@@ -1,4 +1,3 @@
-
 import Express from "express";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
@@ -9,6 +8,7 @@ const port = 3000;
 
 //routers
 import { accountRouter } from "./account";
+import { apiRouter } from "./api";
 
 
 app.use(cookieParser());
@@ -54,6 +54,7 @@ async function onStart() {
 onStart()
 
 app.use("/account", accountRouter);
+app.use("/api", apiRouter);
 
 app.get("/", async(req, res) => {
     res.status(200);
