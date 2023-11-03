@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { API } from "./models/API";
 import { Account } from "./models/Account";
 // import { json } from "body-parser";
@@ -12,8 +13,14 @@ interface apis {
     [key: string]: API
 };
 
+interface sessions {
+    [key: string]: string[]
+}
+
 let AccountPath: string = "./tables/Accounts.json";
 let APIPath: string = "./tables/APIs.json";
+let SessionPath: string = "./tables/Sessions.json";
+
 
 export const AccountHandler = {
     getAccount: (id: string) => {
@@ -57,5 +64,27 @@ export const APIHandler = {
         let APIData: apis = JSON.parse(fs.readFileSync(APIPath, {encoding: "utf-8"}));
         APIData[api.id] = api;
         fs.writeFileSync(APIPath, JSON.stringify(APIData), {encoding: "utf-8"});
+    }
+}
+
+export const SessionHandler = {
+    createSession: (hashedUserID: string, hashedSessionID: string) => {
+        let allSessions: sessions = JSON.parse(fs.readFileSync(SessionPath, {encoding: "utf-8"}));
+        
+        if(!allSessions[hashedUserID]) {
+            allSessions[hashedUserID] = [];
+        }
+        
+        allSessions[hashedUserID].push(hashedSessionID);
+        fs.writeFileSync(SessionPath, JSON.stringify(allSessions), {encoding: "utf-8"});
+    },
+
+    verifySession: (token: string) => {
+        let userID = token.split(".")[0];
+        let sessionID = token.split(".")[1];
+
+        let allSessions: sessions = JSON.parse(fs.readFileSync(SessionPath, {encoding: "utf-8"}));
+        let usersSessions = allSessions[createHash("sha256").update(userID).digest("hex")];
+    
     }
 }

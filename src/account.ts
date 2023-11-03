@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { AccountHandler } from "./database";
+import { AccountHandler, SessionHandler } from "./database";
 import { Account } from "./models/Account";
 import { createHash, randomUUID } from "crypto";
 import { FilteredAccount } from "./models/FilteredAcount";
@@ -57,8 +57,19 @@ accountRouter.post("/login/", async(req: any, res) => {
         allowedAPIKeys: account.allowedAPIKeys
     };
 
+    let sessionID = randomUUID();
+    let hashedSessionID = createHash("sha256").update(sessionID).digest("hex");
+    let hashedUserID = createHash('sha256').update(account.id).digest("hex");
+
+    SessionHandler.createSession(hashedUserID, hashedSessionID);
+
     res.status(200);
-    res.send({"response": filteredAccount, "error": ""});
+    res.send({"response": {"account": filteredAccount, "token": `${hashedUserID}.${hashedSessionID}`}, "error": ""});
+})
+
+
+accountRouter.get("/info/", async (req: any, res) => {
+    SessionHandler.verifySession(req.cookies.token);
 })
 
 //create account
