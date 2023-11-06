@@ -21,7 +21,7 @@ accountRouter.post("/new/", async(req: any, res) => {
     }
 
     //user cant change these :)
-    newAccount.id = randomUUID();
+    newAccount.id = createHash("sha256").update(randomUUID()).digest("hex");
     newAccount.allowedAPIKeys = [];
     newAccount.createdAt = Date.now();
     newAccount.APIKeys = [];
@@ -57,19 +57,25 @@ accountRouter.post("/login/", async(req: any, res) => {
         allowedAPIKeys: account.allowedAPIKeys
     };
 
-    let sessionID = randomUUID();
-    let hashedSessionID = createHash("sha256").update(sessionID).digest("hex");
-    let hashedUserID = createHash('sha256').update(account.id).digest("hex");
+    let sessionID = createHash("sha256").update(randomUUID()).digest("hex");
 
-    SessionHandler.createSession(hashedUserID, hashedSessionID);
+    SessionHandler.createSession(account.id, sessionID);
 
     res.status(200);
-    res.send({"response": {"account": filteredAccount, "token": `${hashedUserID}.${hashedSessionID}`}, "error": ""});
+    res.send({"response": {"account": filteredAccount, "token": `${account.id}.${sessionID}`}, "error": ""});
 })
 
 
 accountRouter.get("/info/", async (req: any, res) => {
-    SessionHandler.verifySession(req.cookies.token);
+
+    if(!SessionHandler.verifySession(req.cookies.token)) {
+        res.status(401);
+        res.send({"response": "", "error": "Invalid Login"});
+        return;
+    }
+
+    res.status(200);
+    res.send({"response": AccountHandler.getFilteredAccount(req.cookies.token.split(".")[0])});
 })
 
 //create account
