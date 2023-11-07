@@ -61,6 +61,16 @@ export const AccountHandler = {
         // console.log(accountData.keys);
 
         // return   account;
+    },
+
+    authorizeAPI: (userID: string, APIID: string) => {
+        let accountData: accounts = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
+        
+        if(accountData[userID].allowedAPIKeys.indexOf(APIID) != -1) {
+            return;
+        }
+        accountData[userID].allowedAPIKeys.push(APIID);
+        fs.writeFileSync(AccountPath, JSON.stringify(accountData), {encoding: "utf-8"});
     }
 }
 
@@ -76,7 +86,7 @@ export const APIHandler = {
     createAPI: (api: API) => {
         let APIData: apis = JSON.parse(fs.readFileSync(APIPath, {encoding: "utf-8"}));
         
-        if(APIData[api.id] == null) {
+        if(APIData[api.id] != null) {
             return false;
         }
         
