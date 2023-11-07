@@ -4,7 +4,7 @@ import { Account } from "./models/Account";
 // import { json } from "body-parser";
 
 import * as fs from "fs";
-import { FilteredAccount } from "./models/FilteredAcount";
+import { ExternalFacingFilteredAccount, FilteredAccount } from "./models/FilteredAcount";
 
 interface accounts {
     [key: string]: Account
@@ -36,11 +36,21 @@ export const AccountHandler = {
         let filteredAccount: FilteredAccount = {
             name: account.name,
             email: account.email,
-            APIKeys: account.APIKeys,
+            ownedAPIs: account.ownedAPIs,
             createdAt: account.createdAt,
-            allowedAPIKeys: account.allowedAPIKeys
+            allowedAPIs: account.allowedAPIs
         };
         return filteredAccount;
+    },
+
+    getExternalFacingFilteredAccount: (id: string) => {
+        let account = AccountHandler.getAccount(id);
+        let externalFacingFilteredAccount: ExternalFacingFilteredAccount = {
+            name: account.name,
+            email: account.email,
+            createdAt: account.createdAt
+        }
+        return externalFacingFilteredAccount;
     },
     
     createAccount: (account: Account) => {
@@ -66,10 +76,10 @@ export const AccountHandler = {
     authorizeAPI: (userID: string, APIID: string) => {
         let accountData: accounts = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
         
-        if(accountData[userID].allowedAPIKeys.indexOf(APIID) != -1) {
+        if(accountData[userID].allowedAPIs.indexOf(APIID) != -1) {
             return;
         }
-        accountData[userID].allowedAPIKeys.push(APIID);
+        accountData[userID].allowedAPIs.push(APIID);
         fs.writeFileSync(AccountPath, JSON.stringify(accountData), {encoding: "utf-8"});
     }
 }
@@ -97,9 +107,9 @@ export const APIHandler = {
 }
 
 export const SessionHandler = {
-    createSession: (userID: string, sessionID: string) => {
+    createSession: (userID: string, sessionID: string, apiid: string) => {
         let hashedUserID = createHash("sha256").update(userID).digest("hex");
-        let hashedSessionID = createHash("sha256").update(sessionID).digest("hex");
+        let hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
 
         let allSessions: sessions = JSON.parse(fs.readFileSync(SessionPath, {encoding: "utf-8"}));
         
@@ -111,12 +121,12 @@ export const SessionHandler = {
         fs.writeFileSync(SessionPath, JSON.stringify(allSessions), {encoding: "utf-8"});
     },
 
-    verifySession: (token: string) => {
+    verifySession: (token: string, apiid: string) => {
         let userID = token.split(".")[0];
         let sessionID = token.split(".")[1];
 
         let hashedUserID = createHash("sha256").update(userID).digest("hex");
-        let hashedSessionID = createHash("sha256").update(sessionID).digest("hex");
+        let hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
         
         let allSessions: sessions = JSON.parse(fs.readFileSync(SessionPath, {encoding: "utf-8"}));
         let userSessions = allSessions[hashedUserID];

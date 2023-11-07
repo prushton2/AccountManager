@@ -3,7 +3,7 @@ export interface Account {
     name: string,
     email: string,
     password: string,
-    APIKeys: string[],
+    ownedAPIs: string[],
     createdAt: number,
-    allowedAPIKeys: string[]
+    allowedAPIs: string[]
 }

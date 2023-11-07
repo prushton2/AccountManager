@@ -2,7 +2,15 @@
 export interface FilteredAccount {
     name: string,
     email: string,
-    APIKeys: string[],
     createdAt: number,
-    allowedAPIKeys: string[]
+    ownedAPIs: string[],
+    allowedAPIs: string[]
+}
+
+
+//This is for API owners to use and is meant to not return any of the users API related data
+export interface ExternalFacingFilteredAccount {
+    name: string,
+    email: string,
+    createdAt: number
 }
