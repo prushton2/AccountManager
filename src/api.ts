@@ -6,7 +6,7 @@ export const apiRouter = Router();
 
 
 apiRouter.post("/new/", async(req: any, res) => {
-    if(!SessionHandler.verifySession(req.cookies.token, "0")) {
+    if(!SessionHandler.verifySession(req.cookies.token, "0")) { //user must be logged into the service api to make this change
         res.status(401);
         res.send({"response": "", "error": "Invalid Login"});
         return;
