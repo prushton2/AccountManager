@@ -89,7 +89,11 @@ export const APIHandler = {
     getAPI: (id: string) => {
         let APIData: apis = JSON.parse(fs.readFileSync(APIPath, {encoding: "utf-8"}));
         let Api: API = APIData[id];
+        
+        console.log(Api);
+        
         Api.id = id;
+
         return Api
     },
 

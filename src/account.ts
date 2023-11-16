@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { AccountHandler, SessionHandler } from "./database";
+import { APIHandler, AccountHandler, SessionHandler } from "./database";
 import { Account } from "./models/Account";
 import { createHash, randomUUID } from "crypto";
+import { API } from "./models/API";
 export const accountRouter = Router();
 
 
@@ -35,6 +36,7 @@ accountRouter.post("/new/", async(req: any, res) => {
 accountRouter.post("/login/", async(req: any, res) => {
     
     let account: Account | undefined = AccountHandler.getAccountByName(req.body.name);
+    let API: API | undefined = APIHandler.getAPI(req.query.api);
     
     if(account == undefined) {
         res.status(400);
@@ -53,7 +55,7 @@ accountRouter.post("/login/", async(req: any, res) => {
     SessionHandler.createSession(account.id, sessionID, req.query.api);
 
     res.status(200);
-    res.send({"response": {"token": `${account.id}.${sessionID}`}, "error": ""});
+    res.send({"response": {"token": `${account.id}.${sessionID}`, "redirectTo": `${API.returnAddress}?token=${account.id}.${sessionID}`}, "error": ""});
 })
 
 
