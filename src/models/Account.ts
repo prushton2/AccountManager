@@ -1,5 +1,7 @@
+import { _id } from "./_id"
+
 export interface Account {
-    id: string,
+    _id: _id,
     name: string,
     email: string,
     password: string,

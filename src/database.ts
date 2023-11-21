@@ -1,10 +1,12 @@
 import { createHash } from "crypto";
+import { MongoClient } from "mongodb";
 import { API } from "./models/API";
 import { Account } from "./models/Account";
 // import { json } from "body-parser";
 
 import * as fs from "fs";
 import { ExternalFacingFilteredAccount, FilteredAccount } from "./models/FilteredAcount";
+import { _id } from "./models/_id";
 
 interface accounts {
     [key: string]: Account
@@ -27,7 +29,7 @@ export const AccountHandler = {
     getAccount: (id: string) => {
         let accountData: {} = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
         let Account: Account = accountData[id as keyof typeof accountData] as Account;
-        Account["id"] = id;
+        // Account["id"] = id;
         return Account;
     },
 
@@ -56,7 +58,7 @@ export const AccountHandler = {
     createAccount: (account: Account) => {
         let accountData: accounts = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
         // let newAccountData: {} = {...accountData, }
-        accountData[account.id] = account;
+        // accountData[account.id] = account;
         fs.writeFileSync(AccountPath, JSON.stringify(accountData), {encoding: "utf-8"});
     },
 
@@ -111,8 +113,8 @@ export const APIHandler = {
 }
 
 export const SessionHandler = {
-    createSession: (userID: string, sessionID: string, apiid: string) => {
-        let hashedUserID = createHash("sha256").update(userID).digest("hex");
+    createSession: (userID: _id, sessionID: string, apiid: string) => {
+        let hashedUserID = createHash("sha256").update(userID.$oid).digest("hex");
         let hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
 
         let allSessions: sessions = JSON.parse(fs.readFileSync(SessionPath, {encoding: "utf-8"}));

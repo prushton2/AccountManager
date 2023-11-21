@@ -21,7 +21,7 @@ accountRouter.post("/new/", async(req: any, res) => {
     }
 
     //user cant change these :)
-    newAccount.id = createHash("sha256").update(randomUUID()).digest("hex");
+    // newAccount.id = createHash("sha256").update(randomUUID()).digest("hex");
     newAccount.allowedAPIs = [];
     newAccount.createdAt = Date.now();
     newAccount.ownedAPIs = [];
@@ -52,20 +52,20 @@ accountRouter.post("/login/", async(req: any, res) => {
 
     let sessionID = createHash("sha256").update(randomUUID()).digest("hex");
 
-    SessionHandler.createSession(account.id, sessionID, req.query.api);
+    SessionHandler.createSession(account._id, sessionID, req.query.api);
 
     res.status(200);
-    res.send({"response": {"token": `${account.id}.${sessionID}`, "redirectTo": `${API.returnAddress}?token=${account.id}.${sessionID}`}, "error": ""});
+    res.send({"response": {"token": `${account._id.$oid}.${sessionID}`, "redirectTo": `${API.returnAddress}?token=${account._id.$oid}.${sessionID}`}, "error": ""});
 })
 
 
 accountRouter.get("/info/", async (req: any, res) => {
 
-    if(!SessionHandler.verifySession(req.cookies.token, req.query.api)) {
-        res.status(401);
-        res.send({"response": "", "error": "Invalid Login"});
-        return;
-    }
+    // if(!SessionHandler.verifySession(req.cookies.token, req.query.api)) {
+    //     res.status(401);
+    //     res.send({"response": "", "error": "Invalid Login"});
+    //     return;
+    // }
 
     res.status(200);
     res.send({"response": AccountHandler.getExternalFacingFilteredAccount(req.cookies.token.split(".")[0])});
