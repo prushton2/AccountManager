@@ -2,6 +2,8 @@ import Express from "express";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 // import { CorsOptions } from "cors";
+import { setDB } from "./database";
+import * as mongoDB from "mongodb";
 
 const app = Express();
 const port = 3000;
@@ -42,8 +44,24 @@ async function onStart() {
         // await archive.loadLatestSave();
         console.log("Loaded latest archive");
     }
-    console.log("Database is ready")
 
+    await setDB();
+
+    // let getclient = database.getClient();
+    
+    // if(!getclient) {
+    //     console.log("DB failed to connect");
+    //     return;
+    // }
+    
+    // client = getclient;
+
+    // await client.connect();
+
+    
+    
+    
+    console.log("Database is ready")
     app.listen(port,() => {
         console.log(`App listening on port ${port}`)
     })

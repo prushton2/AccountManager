@@ -1,12 +1,16 @@
 import { createHash } from "crypto";
-import { MongoClient } from "mongodb";
+import * as mongoDB from "mongodb";
+import { ObjectId } from "mongodb";
+import "dotenv/config";
+
 import { API } from "./models/API";
 import { Account } from "./models/Account";
+import { _id } from "./models/_id";
+
 // import { json } from "body-parser";
 
 import * as fs from "fs";
 import { ExternalFacingFilteredAccount, FilteredAccount } from "./models/FilteredAcount";
-import { _id } from "./models/_id";
 
 interface accounts {
     [key: string]: Account
@@ -20,21 +24,89 @@ interface sessions {
     [key: string]: string[]
 }
 
+interface Collections {
+    users: mongoDB.Collection;
+}
+
 let AccountPath: string = "./tables/Accounts.json";
 let APIPath: string = "./tables/APIs.json";
 let SessionPath: string = "./tables/Sessions.json";
 
+// const DB_CONN_STRING: string = process.env.MONGO_DB_CONN_URL
+// `mongodb+srv://${process.env.MONGO_DB_USERNAME}:${process.env.MONGO_DB_PASSWORD}@${process.env.MONGO_DB_URL}`
+const DB_NAME: string ="AccountManager"
+const USERS_COLLECTION_NAME: string ="Users"
+
+export let client: mongoDB.MongoClient;
+export let db: mongoDB.Db;
+export let collections: Collections;
+// let usersCollection: mongoDB.Collection;
+
+
+// export const database = {
+//     //these functions return the client, db, and collections for the user to store in the variables defined above.
+//     getClient: (): mongoDB.MongoClient | null => {
+//         if(!process.env.MONGO_DB_CONN_URL) {
+//             // return false;
+//             return null;
+//         }
+        
+//         return new mongoDB.MongoClient(process.env.MONGO_DB_CONN_URL, { useNewUrlParser: true } as mongoDB.MongoClientOptions);        
+//     },
+
+//     getDB: (client: mongoDB.MongoClient): mongoDB.Db => {
+//         return client.db(DB_NAME);
+//     },
+
+//     getCollections: (db: mongoDB.Db): Collections => {
+//         return {
+//             users: db.collection(USERS_COLLECTION_NAME)
+//         }
+//     }
+
+// }
+
+export const setDB = async() => {
+    if(!process.env.MONGO_DB_CONN_URL) {
+        return false;
+    }
+    
+    console.log(process.env.MONGO_DB_CONN_URL);
+    client = new mongoDB.MongoClient(process.env.MONGO_DB_CONN_URL, { useNewUrlParser: true } as mongoDB.MongoClientOptions);
+    // const client: mongoDB.MongoClient = new mongoDB.MongoClient(process.env.MONGO_DB_CONN_URL);
+    await client.connect();
+
+
+    db = client.db(DB_NAME) as mongoDB.Db;
+    collections = {
+        users: db.collection(USERS_COLLECTION_NAME)
+    };
+}
 
 export const AccountHandler = {
-    getAccount: (id: string) => {
-        let accountData: {} = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
-        let Account: Account = accountData[id as keyof typeof accountData] as Account;
+    getAccount: async (id: string) => {
+        // let accountData: {} = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
+        // let Account: Account = accountData[id as keyof typeof accountData] as Account;
         // Account["id"] = id;
-        return Account;
+
+        console.log(collections.users);
+
+        let account  = await collections.users.findOne({_id: new ObjectId(id)});
+        if(!account) {
+            return {} as Account;
+        }
+        
+        console.log(account);
+        
+        return {} as Account;
+        // return account as Account;
     },
 
-    getFilteredAccount: (id: string) => {
-        let account = AccountHandler.getAccount(id);
+    getFilteredAccount: async(id: string) => {
+        let account = await AccountHandler.getAccount(id);
+        if(!account) {
+            return false;
+        }
         let filteredAccount: FilteredAccount = {
             name: account.name,
             email: account.email,
@@ -45,8 +117,8 @@ export const AccountHandler = {
         return filteredAccount;
     },
 
-    getExternalFacingFilteredAccount: (id: string) => {
-        let account = AccountHandler.getAccount(id);
+    getExternalFacingFilteredAccount: async(id: string) => {
+        let account = await AccountHandler.getAccount(id);
         let externalFacingFilteredAccount: ExternalFacingFilteredAccount = {
             name: account.name,
             email: account.email,

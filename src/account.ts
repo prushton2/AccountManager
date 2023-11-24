@@ -68,7 +68,7 @@ accountRouter.get("/info/", async (req: any, res) => {
     // }
 
     res.status(200);
-    res.send({"response": AccountHandler.getExternalFacingFilteredAccount(req.cookies.token.split(".")[0])});
+    res.send({"response": await AccountHandler.getExternalFacingFilteredAccount(req.cookies.token.split(".")[0])});
 })
 
 accountRouter.get("/authenticate/",async (req:any, body) => {
