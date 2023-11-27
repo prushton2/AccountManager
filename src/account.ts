@@ -35,9 +35,12 @@ accountRouter.post("/new/", async(req: any, res) => {
 
 accountRouter.post("/login/", async(req: any, res) => {
     
-    let account: Account | undefined = AccountHandler.getAccountByName(req.body.name);
-    let API: API | undefined = APIHandler.getAPI(req.query.api);
+    let account: Account = await AccountHandler.getAccountByName(req.body.name);
+    let API: API = await APIHandler.getAPI(req.query.api);
     
+    console.log(API);
+    console.log(account);
+
     if(account == undefined) {
         res.status(400);
         res.send({"response": "", "error": "No Account Found"})
@@ -50,12 +53,15 @@ accountRouter.post("/login/", async(req: any, res) => {
         return;
     }
 
+
     let sessionID = createHash("sha256").update(randomUUID()).digest("hex");
 
+    //we give the unhashed version to the handler, it hashes it
     SessionHandler.createSession(account._id, sessionID, req.query.api);
 
+    //we send back the unhashed version
     res.status(200);
-    res.send({"response": {"token": `${account._id.$oid}.${sessionID}`, "redirectTo": `${API.returnAddress}?token=${account._id.$oid}.${sessionID}`}, "error": ""});
+    res.send({"response": {"token": `${account._id.id}.${sessionID}`, "redirectTo": `${API.returnAddress}?token=${account._id.id}.${sessionID}`}, "error": ""});
 })
 
 

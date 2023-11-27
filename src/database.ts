@@ -11,6 +11,7 @@ import { _id } from "./models/_id";
 
 import * as fs from "fs";
 import { ExternalFacingFilteredAccount, FilteredAccount } from "./models/FilteredAcount";
+import { Session } from "./models/Session";
 
 interface accounts {
     [key: string]: Account
@@ -26,6 +27,8 @@ interface sessions {
 
 interface Collections {
     users: mongoDB.Collection;
+    sessions: mongoDB.Collection;
+    apis: mongoDB.Collection;
 }
 
 let AccountPath: string = "./tables/Accounts.json";
@@ -34,37 +37,15 @@ let SessionPath: string = "./tables/Sessions.json";
 
 // const DB_CONN_STRING: string = process.env.MONGO_DB_CONN_URL
 // `mongodb+srv://${process.env.MONGO_DB_USERNAME}:${process.env.MONGO_DB_PASSWORD}@${process.env.MONGO_DB_URL}`
-const DB_NAME: string ="AccountManager"
-const USERS_COLLECTION_NAME: string ="Users"
+const DB_NAME: string ="AccountManager";
+const USERS_COLLECTION_NAME: string ="Users";
+const SESSIONS_COLLECTION_NAME: string ="Sessions";
+const APIS_COLLECTION_NAME: string ="APIs";
 
 export let client: mongoDB.MongoClient;
 export let db: mongoDB.Db;
 export let collections: Collections;
-// let usersCollection: mongoDB.Collection;
 
-
-// export const database = {
-//     //these functions return the client, db, and collections for the user to store in the variables defined above.
-//     getClient: (): mongoDB.MongoClient | null => {
-//         if(!process.env.MONGO_DB_CONN_URL) {
-//             // return false;
-//             return null;
-//         }
-        
-//         return new mongoDB.MongoClient(process.env.MONGO_DB_CONN_URL, { useNewUrlParser: true } as mongoDB.MongoClientOptions);        
-//     },
-
-//     getDB: (client: mongoDB.MongoClient): mongoDB.Db => {
-//         return client.db(DB_NAME);
-//     },
-
-//     getCollections: (db: mongoDB.Db): Collections => {
-//         return {
-//             users: db.collection(USERS_COLLECTION_NAME)
-//         }
-//     }
-
-// }
 
 export const setDB = async() => {
     if(!process.env.MONGO_DB_CONN_URL) {
@@ -79,27 +60,20 @@ export const setDB = async() => {
 
     db = client.db(DB_NAME) as mongoDB.Db;
     collections = {
-        users: db.collection(USERS_COLLECTION_NAME)
+        users: db.collection(USERS_COLLECTION_NAME),
+        sessions: db.collection(SESSIONS_COLLECTION_NAME),
+        apis: db.collection(APIS_COLLECTION_NAME),
     };
 }
 
 export const AccountHandler = {
-    getAccount: async (id: string) => {
-        // let accountData: {} = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
-        // let Account: Account = accountData[id as keyof typeof accountData] as Account;
-        // Account["id"] = id;
-
-        console.log(collections.users);
-
+    getAccount: async (id: string): Promise<Account | false> => {
         let account  = await collections.users.findOne({_id: new ObjectId(id)});
         if(!account) {
             return {} as Account;
         }
-        
-        console.log(account);
-        
-        return {} as Account;
-        // return account as Account;
+
+        return account as any as Account;
     },
 
     getFilteredAccount: async(id: string) => {
@@ -119,6 +93,10 @@ export const AccountHandler = {
 
     getExternalFacingFilteredAccount: async(id: string) => {
         let account = await AccountHandler.getAccount(id);
+        if(!account) {
+            return {} as ExternalFacingFilteredAccount;
+        }
+
         let externalFacingFilteredAccount: ExternalFacingFilteredAccount = {
             name: account.name,
             email: account.email,
@@ -134,17 +112,8 @@ export const AccountHandler = {
         fs.writeFileSync(AccountPath, JSON.stringify(accountData), {encoding: "utf-8"});
     },
 
-    getAccountByName: (name: string) => {
-        let accountData: accounts = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
-        // let account: Account = {} as Account;
-        for(let k in accountData) {
-            if(accountData[k].name == name) {
-                return accountData[k];
-            }
-        }
-        // console.log(accountData.keys);
-
-        // return   account;
+    getAccountByName: async(name: string): Promise<Account> => {
+        return await collections.users.findOne({name: name}) as object as Account;
     },
 
     authorizeAPI: (userID: string, APIID: string) => {
@@ -160,15 +129,15 @@ export const AccountHandler = {
 
 export const APIHandler = {
     //id is the unhashed id that should come from the url 
-    getAPI: (id: string) => {
-        let APIData: apis = JSON.parse(fs.readFileSync(APIPath, {encoding: "utf-8"}));
-        let Api: API = APIData[id];
+    getAPI: async(id: string): Promise<API> => {
+        // let APIData: apis = JSON.parse(fs.readFileSync(APIPath, {encoding: "utf-8"}));
+        // let Api: API = APIData[id];
         
-        console.log(Api);
+        // console.log(Api);
         
-        Api.id = id;
+        // Api.id = id;
 
-        return Api
+        return collections.apis.findOne({"_id": new ObjectId(id)}) as object as API;
     },
 
     createAPI: (api: API) => {
@@ -185,18 +154,33 @@ export const APIHandler = {
 }
 
 export const SessionHandler = {
-    createSession: (userID: _id, sessionID: string, apiid: string) => {
-        let hashedUserID = createHash("sha256").update(userID.$oid).digest("hex");
+    createSession: async(userID: ObjectId, sessionID: string, apiid: string) => {
+        let hashedUserID = createHash("sha256").update(userID.id).digest("hex");
         let hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
 
-        let allSessions: sessions = JSON.parse(fs.readFileSync(SessionPath, {encoding: "utf-8"}));
-        
-        if(!allSessions[hashedUserID]) {
-            allSessions[hashedUserID] = [];
+        // let allSessions: sessions = JSON.parse(fs.readFileSync(SessionPath, {encoding: "utf-8"}));
+
+        let session = await collections.sessions.findOne({userID: hashedUserID});
+
+        console.log(`Session: ${session}`);
+
+
+        if(session == null) {
+            collections.sessions.insertOne({
+                userID: hashedUserID,
+                sessions: [hashedSessionID]
+            })
+        } else {
+            let newSessionArray = session.sessions;
+            newSessionArray.push(hashedSessionID);
+            collections.sessions.updateOne({userID: hashedUserID}, {sessions: newSessionArray});
         }
+        // if(!allSessions[hashedUserID]) {
+        //     allSessions[hashedUserID] = [];
+        // }
         
-        allSessions[hashedUserID].push(hashedSessionID);
-        fs.writeFileSync(SessionPath, JSON.stringify(allSessions), {encoding: "utf-8"});
+        // allSessions[hashedUserID].push(hashedSessionID);
+        // fs.writeFileSync(SessionPath, JSON.stringify(allSessions), {encoding: "utf-8"});
     },
 
     verifySession: (token: string, apiid: string) => {
