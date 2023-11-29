@@ -52,7 +52,6 @@ export const setDB = async() => {
         return false;
     }
     
-    console.log(process.env.MONGO_DB_CONN_URL);
     client = new mongoDB.MongoClient(process.env.MONGO_DB_CONN_URL, { useNewUrlParser: true } as mongoDB.MongoClientOptions);
     // const client: mongoDB.MongoClient = new mongoDB.MongoClient(process.env.MONGO_DB_CONN_URL);
     await client.connect();
@@ -105,11 +104,15 @@ export const AccountHandler = {
         return externalFacingFilteredAccount;
     },
     
-    createAccount: (account: Account) => {
-        let accountData: accounts = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
-        // let newAccountData: {} = {...accountData, }
-        // accountData[account.id] = account;
-        fs.writeFileSync(AccountPath, JSON.stringify(accountData), {encoding: "utf-8"});
+    createAccount: async(account: Account): Promise<boolean> => {
+        let existingAccount = await AccountHandler.getAccountByName(account.name);
+
+        if(existingAccount) {
+            return false;
+        }
+
+        await collections.users.insertOne(account);
+        return true;
     },
 
     getAccountByName: async(name: string): Promise<Account> => {
@@ -155,14 +158,14 @@ export const APIHandler = {
 
 export const SessionHandler = {
     createSession: async(userID: ObjectId, sessionID: string, apiid: string) => {
-        let hashedUserID = createHash("sha256").update(userID.id).digest("hex");
+        let hashedUserID = createHash("sha256").update(userID.toString()).digest("hex");
         let hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
 
-        // let allSessions: sessions = JSON.parse(fs.readFileSync(SessionPath, {encoding: "utf-8"}));
 
-        let session = await collections.sessions.findOne({userID: hashedUserID});
+        let session: Session = await collections.sessions.findOne({userID: hashedUserID}) as any as Session;
 
-        console.log(`Session: ${session}`);
+        // console.log(`Session: ${session}`);
+        // console.log(session);
 
 
         if(session == null) {
@@ -171,31 +174,54 @@ export const SessionHandler = {
                 sessions: [hashedSessionID]
             })
         } else {
-            let newSessionArray = session.sessions;
+            let newSessionArray: String[] = session.sessions;
             newSessionArray.push(hashedSessionID);
-            collections.sessions.updateOne({userID: hashedUserID}, {sessions: newSessionArray});
+            collections.sessions.updateOne({userID: hashedUserID}, {$set: {sessions: newSessionArray}}, {upsert: true});
         }
         // if(!allSessions[hashedUserID]) {
         //     allSessions[hashedUserID] = [];
         // }
         
         // allSessions[hashedUserID].push(hashedSessionID);
-        // fs.writeFileSync(SessionPath, JSON.stringify(allSessions), {encoding: "utf-8"});
     },
 
-    verifySession: (token: string, apiid: string) => {
+    verifySession: async(token: string, apiid: string): Promise<boolean> => {
         let userID = token.split(".")[0];
         let sessionID = token.split(".")[1];
 
         let hashedUserID = createHash("sha256").update(userID).digest("hex");
         let hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
         
-        let allSessions: sessions = JSON.parse(fs.readFileSync(SessionPath, {encoding: "utf-8"}));
-        let userSessions = allSessions[hashedUserID];
-        
-        if(userSessions.indexOf(hashedSessionID) > -1) {
-            return true;
+        let userSessions: Session = await collections.sessions.findOne({"userID": hashedUserID}) as object as Session;
+
+        //if user doesnt exist, break
+        if(userSessions == null) {
+            return false;
         }
-        return false;
+
+        //we hash the session ID in the users account and check it if its in the users sessions
+        return userSessions.sessions.indexOf(hashedSessionID) > -1
+    },
+
+    removeSession: async(token: string, apiid: string): Promise<boolean> => {
+        
+        let userID = token.split(".")[0];
+        let sessionID = token.split(".")[1];
+
+        let hashedUserID = createHash("sha256").update(userID).digest("hex");
+        let hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
+
+
+        let userSessions: Session = await collections.sessions.findOne({"userID": hashedUserID}) as object as Session;
+        
+
+        userSessions.sessions = userSessions.sessions.filter(item => item !== hashedSessionID);
+
+
+        await collections.sessions.updateOne({"userID": hashedUserID}, {"$set": {"sessions": userSessions.sessions}});
+
+
+
+        return true;
     }
 }

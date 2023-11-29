@@ -1,4 +1,7 @@
+import { ObjectId } from "mongodb"
+
 export interface Session {
-    hashedID: string,
-    hashedSessionToken: string
+    _id: ObjectId,
+    userID: string,
+    sessions: string[]
 }
