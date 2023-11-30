@@ -58,7 +58,7 @@ apiRouter.post("/createAPIKey", async(req: any, res) => {
         res.send({"response": "", "error": "Invalid Login"});
         return;
     }
-    console.log("A");
+    
     let account: Account | false = await AccountHandler.getAccount(req.cookies.token.split(".")[0]);
     
     if(account == false) {
@@ -67,14 +67,12 @@ apiRouter.post("/createAPIKey", async(req: any, res) => {
         return;
     }
     
-    console.log("B");
     if(account.ownedAPIs.indexOf(req.body.apiid) == -1) {
         res.status(401);
         res.send({"response": "", "error": "You do not own this API"});
         return;
     }
     
-    console.log("C");
     let key = await APIHandler.createAPIKey(req.body.apiid);
     
     console.log("D");
