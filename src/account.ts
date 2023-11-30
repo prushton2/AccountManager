@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { APIHandler, AccountHandler, SessionHandler } from "./database";
 import { Account } from "./models/Account";
-import { createHash, randomUUID } from "crypto";
+import { createHash, randomUUID, verify } from "crypto";
 import { API } from "./models/API";
 export const accountRouter = Router();
 
@@ -48,16 +48,21 @@ accountRouter.post("/login/", async(req: any, res) => {
     let account: Account = await AccountHandler.getAccountByName(req.body.name);
     let API: API = await APIHandler.getAPI(req.query.api);
     
+    if(!await APIHandler.verifyAPIKey(req.query.api, req.body.apikey)) {
+        res.status(401);
+        res.send({"response": "", "error": "Invalid Credentials"});
+        return;
+    }
 
     if(account == undefined) {
-        res.status(400);
-        res.send({"response": "", "error": "No Account Found"})
+        res.status(401);
+        res.send({"response": "", "error": "Invalid Credentials"})
         return;
     }
 
     if(createHash('sha256').update(req.body.password).digest('hex') != account.password) {
         res.status(401);
-        res.send({"response": "", "error": "Invalid Password"});
+        res.send({"response": "", "error": "Invalid Credentials"});
         return;
     }
 

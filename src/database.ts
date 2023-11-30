@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import * as mongoDB from "mongodb";
 import { ObjectId } from "mongodb";
 import "dotenv/config";
@@ -133,26 +133,42 @@ export const AccountHandler = {
 export const APIHandler = {
     //id is the unhashed id that should come from the url 
     getAPI: async(id: string): Promise<API> => {
-        // let APIData: apis = JSON.parse(fs.readFileSync(APIPath, {encoding: "utf-8"}));
-        // let Api: API = APIData[id];
-        
-        // console.log(Api);
-        
-        // Api.id = id;
-
-        return collections.apis.findOne({"_id": new ObjectId(id)}) as object as API;
+        return await collections.apis.findOne({"_id": new ObjectId(id)}) as object as API;
     },
 
-    createAPI: (api: API) => {
-        let APIData: apis = JSON.parse(fs.readFileSync(APIPath, {encoding: "utf-8"}));
+    verifyAPIKey: async(id: string, key: string): Promise<boolean> => {
+
+        let hashedAPIKey = createHash("sha256").update(key).update(id).digest("hex");
+
+        let API = await collections.apis.findOne({_id: new ObjectId(id)}) as object as API;
+
+        if(API == null) {
+            return false;
+        }
+
+        return API.keys.indexOf(hashedAPIKey) != -1;
+    },
+
+    createAPI: async(api: API): Promise<boolean> => {        
+        await collections.apis.insertOne(api);
+        return true;
+    },
+
+    createAPIKey: async (id: string): Promise<false | string> => {
+        let API = await collections.apis.findOne({_id: new ObjectId(id)}) as object as API;
         
-        if(APIData[api.id] != null) {
+        if(API == null) {
             return false;
         }
         
-        APIData[api.id] = api;
-        fs.writeFileSync(APIPath, JSON.stringify(APIData), {encoding: "utf-8"});
-        return true;
+        let key = createHash("sha256").update(randomUUID()).digest("hex");
+        let hashedKey = createHash("sha256").update(key).update(id).digest("hex");
+
+        API.keys.push(hashedKey);
+
+        await collections.apis.updateOne({_id: new ObjectId(id)}, {"$set": {keys: API.keys}});
+
+        return key;
     }
 }
 
@@ -169,14 +185,14 @@ export const SessionHandler = {
 
 
         if(session == null) {
-            collections.sessions.insertOne({
+            await collections.sessions.insertOne({
                 userID: hashedUserID,
                 sessions: [hashedSessionID]
             })
         } else {
             let newSessionArray: String[] = session.sessions;
             newSessionArray.push(hashedSessionID);
-            collections.sessions.updateOne({userID: hashedUserID}, {$set: {sessions: newSessionArray}}, {upsert: true});
+            await collections.sessions.updateOne({userID: hashedUserID}, {$set: {sessions: newSessionArray}}, {upsert: true});
         }
         // if(!allSessions[hashedUserID]) {
         //     allSessions[hashedUserID] = [];
