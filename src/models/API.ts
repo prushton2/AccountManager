@@ -1,5 +1,7 @@
+import { ObjectId } from "mongodb";
+
 export interface API {
-    id: string,
+    _id: ObjectId,
     name: string,
     keys: string[],
     returnAddress: string

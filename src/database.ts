@@ -1,10 +1,17 @@
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
+import * as mongoDB from "mongodb";
+import { ObjectId } from "mongodb";
+import "dotenv/config";
+
 import { API } from "./models/API";
 import { Account } from "./models/Account";
+import { _id } from "./models/_id";
+
 // import { json } from "body-parser";
 
 import * as fs from "fs";
 import { ExternalFacingFilteredAccount, FilteredAccount } from "./models/FilteredAcount";
+import { Session } from "./models/Session";
 
 interface accounts {
     [key: string]: Account
@@ -18,21 +25,61 @@ interface sessions {
     [key: string]: string[]
 }
 
+interface Collections {
+    users: mongoDB.Collection;
+    sessions: mongoDB.Collection;
+    apis: mongoDB.Collection;
+}
+
 let AccountPath: string = "./tables/Accounts.json";
 let APIPath: string = "./tables/APIs.json";
 let SessionPath: string = "./tables/Sessions.json";
 
+// const DB_CONN_STRING: string = process.env.MONGO_DB_CONN_URL
+// `mongodb+srv://${process.env.MONGO_DB_USERNAME}:${process.env.MONGO_DB_PASSWORD}@${process.env.MONGO_DB_URL}`
+const DB_NAME: string ="AccountManager";
+const USERS_COLLECTION_NAME: string ="Users";
+const SESSIONS_COLLECTION_NAME: string ="Sessions";
+const APIS_COLLECTION_NAME: string ="APIs";
+
+export let client: mongoDB.MongoClient;
+export let db: mongoDB.Db;
+export let collections: Collections;
+
+
+export const setDB = async() => {
+    if(!process.env.MONGO_DB_CONN_URL) {
+        return false;
+    }
+    
+    client = new mongoDB.MongoClient(process.env.MONGO_DB_CONN_URL, { useNewUrlParser: true } as mongoDB.MongoClientOptions);
+    // const client: mongoDB.MongoClient = new mongoDB.MongoClient(process.env.MONGO_DB_CONN_URL);
+    await client.connect();
+
+
+    db = client.db(DB_NAME) as mongoDB.Db;
+    collections = {
+        users: db.collection(USERS_COLLECTION_NAME),
+        sessions: db.collection(SESSIONS_COLLECTION_NAME),
+        apis: db.collection(APIS_COLLECTION_NAME),
+    };
+}
 
 export const AccountHandler = {
-    getAccount: (id: string) => {
-        let accountData: {} = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
-        let Account: Account = accountData[id as keyof typeof accountData] as Account;
-        Account["id"] = id;
-        return Account;
+    getAccount: async (id: string): Promise<Account | false> => {
+        let account  = await collections.users.findOne({_id: new ObjectId(id)});
+        if(!account) {
+            return {} as Account;
+        }
+
+        return account as any as Account;
     },
 
-    getFilteredAccount: (id: string) => {
-        let account = AccountHandler.getAccount(id);
+    getFilteredAccount: async(id: string) => {
+        let account = await AccountHandler.getAccount(id);
+        if(!account) {
+            return false;
+        }
         let filteredAccount: FilteredAccount = {
             name: account.name,
             email: account.email,
@@ -43,8 +90,12 @@ export const AccountHandler = {
         return filteredAccount;
     },
 
-    getExternalFacingFilteredAccount: (id: string) => {
-        let account = AccountHandler.getAccount(id);
+    getExternalFacingFilteredAccount: async(id: string) => {
+        let account = await AccountHandler.getAccount(id);
+        if(!account) {
+            return {} as ExternalFacingFilteredAccount;
+        }
+
         let externalFacingFilteredAccount: ExternalFacingFilteredAccount = {
             name: account.name,
             email: account.email,
@@ -53,91 +104,142 @@ export const AccountHandler = {
         return externalFacingFilteredAccount;
     },
     
-    createAccount: (account: Account) => {
-        let accountData: accounts = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
-        // let newAccountData: {} = {...accountData, }
-        accountData[account.id] = account;
-        fs.writeFileSync(AccountPath, JSON.stringify(accountData), {encoding: "utf-8"});
+    createAccount: async(account: Account): Promise<boolean> => {
+        let existingAccount = await AccountHandler.getAccountByName(account.name);
+
+        if(existingAccount) {
+            return false;
+        }
+
+        await collections.users.insertOne(account);
+        return true;
     },
 
-    getAccountByName: (name: string) => {
-        let accountData: accounts = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
-        // let account: Account = {} as Account;
-        for(let k in accountData) {
-            if(accountData[k].name == name) {
-                return accountData[k];
-            }
-        }
-        // console.log(accountData.keys);
-
-        // return   account;
+    getAccountByName: async(name: string): Promise<Account> => {
+        return await collections.users.findOne({name: name}) as object as Account;
     },
 
-    authorizeAPI: (userID: string, APIID: string) => {
-        let accountData: accounts = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
-        
-        if(accountData[userID].allowedAPIs.indexOf(APIID) != -1) {
-            return;
+    nowOwnsAPI: async (userID: string, APIID: string) => {
+        let account = await AccountHandler.getAccount(userID);
+
+        if(!account) {
+            return false;
         }
-        accountData[userID].allowedAPIs.push(APIID);
-        fs.writeFileSync(AccountPath, JSON.stringify(accountData), {encoding: "utf-8"});
+
+        account.ownedAPIs.push(APIID);
+
+        await collections.users.updateOne({_id: new ObjectId(userID)}, {"$set": {"ownedAPIs": account.ownedAPIs}});
     }
 }
 
 export const APIHandler = {
     //id is the unhashed id that should come from the url 
-    getAPI: (id: string) => {
-        let APIData: apis = JSON.parse(fs.readFileSync(APIPath, {encoding: "utf-8"}));
-        let Api: API = APIData[id];
-        
-        console.log(Api);
-        
-        Api.id = id;
-
-        return Api
+    getAPI: async(id: string): Promise<API> => {
+        return await collections.apis.findOne({"_id": new ObjectId(id)}) as object as API;
     },
 
-    createAPI: (api: API) => {
-        let APIData: apis = JSON.parse(fs.readFileSync(APIPath, {encoding: "utf-8"}));
+    verifyAPIKey: async(id: string, key: string): Promise<boolean> => {
+
+        let hashedAPIKey = createHash("sha256").update(key).update(id).digest("hex");
+
+        let API = await collections.apis.findOne({_id: new ObjectId(id)}) as object as API;
+
+        if(API == null) {
+            return false;
+        }
+
+        return API.keys.indexOf(hashedAPIKey) != -1;
+    },
+
+    createAPI: async(api: API): Promise<boolean> => {        
+        await collections.apis.insertOne(api);
+        return true;
+    },
+
+    createAPIKey: async (id: string): Promise<false | string> => {
+        let API = await collections.apis.findOne({_id: new ObjectId(id)}) as object as API;
         
-        if(APIData[api.id] != null) {
+        if(API == null) {
             return false;
         }
         
-        APIData[api.id] = api;
-        fs.writeFileSync(APIPath, JSON.stringify(APIData), {encoding: "utf-8"});
-        return true;
+        let key = createHash("sha256").update(randomUUID()).digest("hex");
+        let hashedKey = createHash("sha256").update(key).update(id).digest("hex");
+
+        API.keys.push(hashedKey);
+
+        await collections.apis.updateOne({_id: new ObjectId(id)}, {"$set": {keys: API.keys}});
+
+        return key;
     }
 }
 
 export const SessionHandler = {
-    createSession: (userID: string, sessionID: string, apiid: string) => {
-        let hashedUserID = createHash("sha256").update(userID).digest("hex");
+    createSession: async(userID: ObjectId, sessionID: string, apiid: string) => {
+        let hashedUserID = createHash("sha256").update(userID.toString()).digest("hex");
         let hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
 
-        let allSessions: sessions = JSON.parse(fs.readFileSync(SessionPath, {encoding: "utf-8"}));
-        
-        if(!allSessions[hashedUserID]) {
-            allSessions[hashedUserID] = [];
+
+        let session: Session = await collections.sessions.findOne({userID: hashedUserID}) as any as Session;
+
+        // console.log(`Session: ${session}`);
+        // console.log(session);
+
+
+        if(session == null) {
+            await collections.sessions.insertOne({
+                userID: hashedUserID,
+                sessions: [hashedSessionID]
+            })
+        } else {
+            let newSessionArray: String[] = session.sessions;
+            newSessionArray.push(hashedSessionID);
+            await collections.sessions.updateOne({userID: hashedUserID}, {$set: {sessions: newSessionArray}}, {upsert: true});
         }
+        // if(!allSessions[hashedUserID]) {
+        //     allSessions[hashedUserID] = [];
+        // }
         
-        allSessions[hashedUserID].push(hashedSessionID);
-        fs.writeFileSync(SessionPath, JSON.stringify(allSessions), {encoding: "utf-8"});
+        // allSessions[hashedUserID].push(hashedSessionID);
     },
 
-    verifySession: (token: string, apiid: string) => {
+    verifySession: async(token: string, apiid: string): Promise<boolean> => {
         let userID = token.split(".")[0];
         let sessionID = token.split(".")[1];
 
         let hashedUserID = createHash("sha256").update(userID).digest("hex");
         let hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
         
-        let allSessions: sessions = JSON.parse(fs.readFileSync(SessionPath, {encoding: "utf-8"}));
-        let userSessions = allSessions[hashedUserID];
-        
-        if(userSessions.indexOf(hashedSessionID) > -1) {
-            return true;
+        let userSessions: Session = await collections.sessions.findOne({"userID": hashedUserID}) as object as Session;
+
+        //if user doesnt exist, break
+        if(userSessions == null) {
+            return false;
         }
-        return false;
+
+        //we hash the session ID in the users account and check it if its in the users sessions
+        return userSessions.sessions.indexOf(hashedSessionID) > -1
+    },
+
+    removeSession: async(token: string, apiid: string): Promise<boolean> => {
+        
+        let userID = token.split(".")[0];
+        let sessionID = token.split(".")[1];
+
+        let hashedUserID = createHash("sha256").update(userID).digest("hex");
+        let hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
+
+
+        let userSessions: Session = await collections.sessions.findOne({"userID": hashedUserID}) as object as Session;
+        
+
+        userSessions.sessions = userSessions.sessions.filter(item => item !== hashedSessionID);
+
+
+        await collections.sessions.updateOne({"userID": hashedUserID}, {"$set": {"sessions": userSessions.sessions}});
+
+
+
+        return true;
     }
 }

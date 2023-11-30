@@ -1,5 +1,8 @@
+import { ObjectId } from "mongodb"
+import { _id } from "./_id"
+
 export interface Account {
-    id: string,
+    _id: ObjectId,
     name: string,
     email: string,
     password: string,

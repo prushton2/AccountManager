@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { APIHandler, AccountHandler, SessionHandler } from "./database";
 import { Account } from "./models/Account";
-import { createHash, randomUUID } from "crypto";
+import { createHash, randomUUID, verify } from "crypto";
 import { API } from "./models/API";
 export const accountRouter = Router();
 
@@ -20,55 +20,89 @@ accountRouter.post("/new/", async(req: any, res) => {
         return;
     }
 
+
+
     //user cant change these :)
-    newAccount.id = createHash("sha256").update(randomUUID()).digest("hex");
+    // newAccount.id = createHash("sha256").update(randomUUID()).digest("hex");
     newAccount.allowedAPIs = [];
     newAccount.createdAt = Date.now();
     newAccount.ownedAPIs = [];
     newAccount.password = createHash('sha256').update(newAccount.password).digest("hex");
 
 
-    AccountHandler.createAccount(newAccount);
+    let accountCreated = await AccountHandler.createAccount(newAccount);
+    
+
+    if(!accountCreated) {
+        res.status(400);
+        res.send({"response": "", "error": "Account by that name already exists"});
+        return;
+    }
+
     res.status(200);
-    res.send({"response": "Created Account", "error": "none"});
+    res.send({"response": "Created Account", "error": ""});
 })
 
 accountRouter.post("/login/", async(req: any, res) => {
     
-    let account: Account | undefined = AccountHandler.getAccountByName(req.body.name);
-    let API: API | undefined = APIHandler.getAPI(req.query.api);
+    let account: Account = await AccountHandler.getAccountByName(req.body.name);
+    let API: API = await APIHandler.getAPI(req.query.api);
     
+    if(!await APIHandler.verifyAPIKey(req.query.api, req.body.apikey)) {
+        res.status(401);
+        res.send({"response": "", "error": "Invalid Credentials"});
+        return;
+    }
+
     if(account == undefined) {
-        res.status(400);
-        res.send({"response": "", "error": "No Account Found"})
+        res.status(401);
+        res.send({"response": "", "error": "Invalid Credentials"})
         return;
     }
 
     if(createHash('sha256').update(req.body.password).digest('hex') != account.password) {
         res.status(401);
-        res.send({"response": "", "error": "Invalid Password"});
+        res.send({"response": "", "error": "Invalid Credentials"});
         return;
     }
 
     let sessionID = createHash("sha256").update(randomUUID()).digest("hex");
 
-    SessionHandler.createSession(account.id, sessionID, req.query.api);
 
+    //we give the unhashed version to the handler, it hashes it
+    await SessionHandler.createSession(account._id, sessionID, req.query.api);
+
+    //we send back the unhashed version
     res.status(200);
-    res.send({"response": {"token": `${account.id}.${sessionID}`, "redirectTo": `${API.returnAddress}?token=${account.id}.${sessionID}`}, "error": ""});
+    res.send({"response": {"token": `${account._id.toString()}.${sessionID}`, "redirectTo": `${API.returnAddress}?token=${account._id.id.toString()}.${sessionID}`}, "error": ""});
 })
 
 
 accountRouter.get("/info/", async (req: any, res) => {
 
-    if(!SessionHandler.verifySession(req.cookies.token, req.query.api)) {
+    if(!await SessionHandler.verifySession(req.cookies.token, req.query.api)) {
         res.status(401);
         res.send({"response": "", "error": "Invalid Login"});
         return;
     }
 
     res.status(200);
-    res.send({"response": AccountHandler.getExternalFacingFilteredAccount(req.cookies.token.split(".")[0])});
+    res.send({"response": await AccountHandler.getExternalFacingFilteredAccount(req.cookies.token.split(".")[0]), "error": ""});
+})
+
+accountRouter.get("/logout", async(req:any, res) => {
+
+    if(!await SessionHandler.verifySession(req.cookies.token, req.query.api)) {
+        res.status(401);
+        res.send({"response": "", "error": "Invalid Login"});
+        return;
+    }
+
+    await SessionHandler.removeSession(req.cookies.token, req.query.api);
+    
+    res.status(200);
+    res.send({"response": "Logged out", "error": ""});
+    return;
 })
 
 accountRouter.get("/authenticate/",async (req:any, body) => {
