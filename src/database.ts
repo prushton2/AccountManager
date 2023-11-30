@@ -119,14 +119,16 @@ export const AccountHandler = {
         return await collections.users.findOne({name: name}) as object as Account;
     },
 
-    authorizeAPI: (userID: string, APIID: string) => {
-        let accountData: accounts = JSON.parse(fs.readFileSync(AccountPath, {encoding: "utf-8"}));
-        
-        if(accountData[userID].allowedAPIs.indexOf(APIID) != -1) {
-            return;
+    nowOwnsAPI: async (userID: string, APIID: string) => {
+        let account = await AccountHandler.getAccount(userID);
+
+        if(!account) {
+            return false;
         }
-        accountData[userID].allowedAPIs.push(APIID);
-        fs.writeFileSync(AccountPath, JSON.stringify(accountData), {encoding: "utf-8"});
+
+        account.ownedAPIs.push(APIID);
+
+        await collections.users.updateOne({_id: new ObjectId(userID)}, {"$set": {"ownedAPIs": account.ownedAPIs}});
     }
 }
 

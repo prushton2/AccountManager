@@ -38,6 +38,8 @@ apiRouter.post("/new/", async(req: any, res) => {
         return;
     }
     
+    AccountHandler.nowOwnsAPI(req.cookies.token.split(".")[0], newAPI._id.toString());
+
     res.status(200);
     res.send({"response": newAPI, "error": ""});
     return;
