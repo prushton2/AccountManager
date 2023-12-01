@@ -8,8 +8,6 @@ import { Account } from "./models/Account";
 import { _id } from "./models/_id";
 
 // import { json } from "body-parser";
-
-import * as fs from "fs";
 import { ExternalFacingFilteredAccount, FilteredAccount } from "./models/FilteredAcount";
 import { Session } from "./models/Session";
 
