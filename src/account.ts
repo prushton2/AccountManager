@@ -76,7 +76,7 @@ accountRouter.post("/login/", async(req: any, res) => {
 
 
     //we give the unhashed version to the handler, it hashes it
-    // await SessionHandler.createSession(account._id, sessionID, req.query.api);
+    await SessionHandler.createSession(account._id, sessionID, req.query.api);
 
     //we send back the unhashed version
     res.status(200);
