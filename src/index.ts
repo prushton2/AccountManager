@@ -83,5 +83,5 @@ app.get(`${process.env.URL_PREFIX}/`, async(req, res) => {
 
 app.all("*", async(req, res) => {
     res.status(404);
-    res.send({"response": "Endpoint does not exist"});
+    res.send({"response": {"text": "Endpoint does not exist", "url": req.url}});
 })
