@@ -105,10 +105,6 @@ accountRouter.get("/logout", async(req:any, res) => {
     return;
 })
 
-accountRouter.get("/authenticate/",async (req:any, body) => {
-    
-})
-
 //create account
 //login
 //logout
