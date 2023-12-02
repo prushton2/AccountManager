@@ -30,9 +30,9 @@ app.use( cors({
 }));
 
 
-// process.on('uncaughtException', (err) => {
-//     console.log(err)
-// })
+process.on('uncaughtException', (err) => {
+    console.log(err)
+})
 
 //Archive every tuesday at 11pm
 // cron.schedule("0 13 * * 2", () => {
