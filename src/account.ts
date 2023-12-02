@@ -24,7 +24,7 @@ accountRouter.post("/new/", async(req: any, res) => {
 
     //user cant change these :)
     // newAccount.id = createHash("sha256").update(randomUUID()).digest("hex");
-    newAccount.allowedAPIs = [];
+    newAccount.allowedAPIs = []; //this is useless currently. Leaving it in incase it wont be.
     newAccount.createdAt = Date.now();
     newAccount.ownedAPIs = [];
     newAccount.password = createHash('sha256').update(newAccount.password).digest("hex");
@@ -45,6 +45,12 @@ accountRouter.post("/new/", async(req: any, res) => {
 
 accountRouter.post("/login/", async(req: any, res) => {
     
+    if(!req.body.name || !req.body.apikey || !req.query.api || !req.body.password) {
+        res.status(400);
+        res.send({"response": "", "error": "Invalid Credentials"});
+        return;
+    }
+
     let account: Account = await AccountHandler.getAccountByName(req.body.name);
     let API: API = await APIHandler.getAPI(req.query.api);
     
