@@ -23,7 +23,7 @@ apiRouter.post("/new/", async(req: any, res) => {
     let newAPI = req.body as API;
     //input validation
 
-    if(!newAPI.name) {
+    if(!newAPI.name || !newAPI.returnAddress) {
         res.status(400);
         res.send({"response": "", "error": "Missing fields"});
         return;

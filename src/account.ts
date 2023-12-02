@@ -45,7 +45,7 @@ accountRouter.post("/new/", async(req: any, res) => {
 
 accountRouter.post("/login/", async(req: any, res) => {
     
-    if(!req.body.name || !req.body.apikey || !req.query.api || !req.body.password) {
+    if(!req.body.name || !req.query.api || !req.body.password) {
         res.status(400);
         res.send({"response": "", "error": "Invalid Credentials"});
         return;
@@ -54,11 +54,11 @@ accountRouter.post("/login/", async(req: any, res) => {
     let account: Account = await AccountHandler.getAccountByName(req.body.name);
     let API: API = await APIHandler.getAPI(req.query.api);
     
-    if(!await APIHandler.verifyAPIKey(req.query.api, req.body.apikey)) {
-        res.status(401);
-        res.send({"response": "", "error": "Invalid Credentials"});
-        return;
-    }
+    // if(!await APIHandler.verifyAPIKey(req.query.api, req.body.apikey)) {
+    //     res.status(401);
+    //     res.send({"response": "", "error": "Invalid Credentials"});
+    //     return;
+    // }
 
     if(account == undefined) {
         res.status(401);
@@ -76,11 +76,11 @@ accountRouter.post("/login/", async(req: any, res) => {
 
 
     //we give the unhashed version to the handler, it hashes it
-    await SessionHandler.createSession(account._id, sessionID, req.query.api);
+    // await SessionHandler.createSession(account._id, sessionID, req.query.api);
 
     //we send back the unhashed version
     res.status(200);
-    res.send({"response": {"token": `${account._id.toString()}.${sessionID}`, "redirectTo": `${API.returnAddress}?token=${account._id.id.toString()}.${sessionID}`}, "error": ""});
+    res.send({"response": {"token": `${account._id.toString()}.${sessionID}`, "redirectTo": `${API.returnAddress}?token=${account._id.toString()}.${sessionID}`}, "error": ""});
 })
 
 
@@ -89,6 +89,17 @@ accountRouter.get("/info/", async (req: any, res) => {
     if(!await SessionHandler.verifySession(req.cookies.token, req.query.api)) {
         res.status(401);
         res.send({"response": "", "error": "Invalid Login"});
+        return;
+    }
+
+    if(!req.body.apikey) {
+        res.status(400);
+        res.send({"response": "", "error": "No API Key provided"});
+    }
+
+    if(!await APIHandler.verifyAPIKey(req.query.api, req.body.apikey)) {
+        res.status(401);
+        res.send({"response": "", "error": "Invalid Credentials"});
         return;
     }
 
