@@ -202,13 +202,21 @@ export const SessionHandler = {
     },
 
     verifySession: async(token: string, apiid: string): Promise<boolean> => {
-        let userID = token.split(".")[0];
-        let sessionID = token.split(".")[1];
-
-        let hashedUserID = createHash("sha256").update(userID).digest("hex");
-        let hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
         
-        let userSessions: Session = await collections.sessions.findOne({"userID": hashedUserID}) as object as Session;
+        let userSessions: Session
+        let hashedUserID, hashedSessionID;
+        
+        try {
+            let userID = token.split(".")[0];
+            let sessionID = token.split(".")[1];
+    
+            hashedUserID = createHash("sha256").update(userID).digest("hex");
+            hashedSessionID = createHash("sha256").update(sessionID).update(apiid).digest("hex");
+        } catch {
+            return false
+        }
+        
+        userSessions = await collections.sessions.findOne({"userID": hashedUserID}) as object as Session;
 
         //if user doesnt exist, break
         if(userSessions == null) {

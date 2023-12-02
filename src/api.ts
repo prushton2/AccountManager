@@ -66,6 +66,11 @@ apiRouter.post("/createAPIKey", async(req: any, res) => {
         res.send({"response": "", "error": "Somehow your account passed verification but doesnt exist..."});
         return;
     }
+
+    if(!req.body.apiid) {
+        res.status(400);
+        res.send({"response": "", "error": "Missing API ID"});
+    }
     
     if(account.ownedAPIs.indexOf(req.body.apiid) == -1) {
         res.status(401);
