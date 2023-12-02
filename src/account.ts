@@ -84,9 +84,9 @@ accountRouter.post("/login/", async(req: any, res) => {
 })
 
 
-accountRouter.get("/info/", async (req: any, res) => {
+accountRouter.post("/info/", async (req: any, res) => {
 
-    if(!await SessionHandler.verifySession(req.cookies.token, req.query.api)) {
+    if(!await SessionHandler.verifySession(req.body.token, req.query.api)) {
         res.status(401);
         res.send({"response": "", "error": "Invalid Login"});
         return;
@@ -95,6 +95,7 @@ accountRouter.get("/info/", async (req: any, res) => {
     if(!req.body.apikey) {
         res.status(400);
         res.send({"response": "", "error": "No API Key provided"});
+        return;
     }
 
     if(!await APIHandler.verifyAPIKey(req.query.api, req.body.apikey)) {

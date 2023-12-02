@@ -6,3 +6,9 @@ export interface API {
     keys: string[],
     returnAddress: string
 }
+
+export interface ExternalFacingFilteredAPI {
+    _id: ObjectId,
+    name: string,
+    returnAddress: string
+}

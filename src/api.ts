@@ -85,3 +85,18 @@ apiRouter.post("/createAPIKey", async(req: any, res) => {
     res.send({"response": key, "error": ""});
     return;    
 })
+
+apiRouter.get("/info/", async (req: any, res) => {
+
+    if(!req.query.apiid) {
+        res.status(400);
+        res.send({"response": "", "error": "No API Key Provided"});
+        return;
+    }
+
+    // let api: API = await APIHandler.getAPI(req.query.apiid);
+
+
+    res.status(200);
+    res.send({"response": await APIHandler.getExternalFacingFilteredAPI(req.query.apiid), "error": ""});
+})

@@ -3,7 +3,7 @@ import * as mongoDB from "mongodb";
 import { ObjectId } from "mongodb";
 import "dotenv/config";
 
-import { API } from "./models/API";
+import { API, ExternalFacingFilteredAPI } from "./models/API";
 import { Account } from "./models/Account";
 import { _id } from "./models/_id";
 
@@ -169,6 +169,20 @@ export const APIHandler = {
         await collections.apis.updateOne({_id: new ObjectId(id)}, {"$set": {keys: API.keys}});
 
         return key;
+    },
+
+    getExternalFacingFilteredAPI: async(id: string) => {
+        let api = await APIHandler.getAPI(id);
+        if(!api) {
+            return {} as ExternalFacingFilteredAPI;
+        }
+
+        let externalFacingFilteredAPI: ExternalFacingFilteredAPI = {
+            _id: api._id,
+            name: api.name,
+            returnAddress: api.returnAddress
+        }
+        return externalFacingFilteredAPI;
     }
 }
 
