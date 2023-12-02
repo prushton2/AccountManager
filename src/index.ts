@@ -76,9 +76,9 @@ onStart()
 app.use(`${process.env.URL_PREFIX}/account`, accountRouter);
 app.use(`${process.env.URL_PREFIX}/api`, apiRouter);
 
-app.get(`${process.env.URL_PREFIX}`, async(req, res) => {
+app.get(`${process.env.URL_PREFIX}/`, async(req, res) => {
     res.status(200);
-    res.send("Worked");
+    res.send("pong");
 })
 
 app.all("*", async(req, res) => {
