@@ -67,7 +67,17 @@ export const AccountHandler = {
     getAccount: async (id: string): Promise<Account | false> => {
         let account  = await collections.users.findOne({_id: new ObjectId(id)});
         if(!account) {
-            return {} as Account;
+            return false;
+        }
+
+        return account as any as Account;
+    },
+
+    getAccountByName: async(name: string): Promise<Account | false> => {
+        let account = await collections.users.findOne({name: name}) as object as Account;
+
+        if(!account) {
+            return false;
         }
 
         return account as any as Account;
@@ -113,10 +123,6 @@ export const AccountHandler = {
         return true;
     },
 
-    getAccountByName: async(name: string): Promise<Account> => {
-        return await collections.users.findOne({name: name}) as object as Account;
-    },
-
     nowOwnsAPI: async (userID: string, APIID: string) => {
         let account = await AccountHandler.getAccount(userID);
 
@@ -132,8 +138,18 @@ export const AccountHandler = {
 
 export const APIHandler = {
     //id is the unhashed id that should come from the url 
-    getAPI: async(id: string): Promise<API> => {
-        return await collections.apis.findOne({"_id": new ObjectId(id)}) as object as API;
+    getAPI: async(id: string): Promise<API | false> => {
+        let api;
+        try {
+            api = await collections.apis.findOne({"_id": new ObjectId(id)}) as object as API;
+        } catch {
+            return false;
+        }
+        if(!api) {
+            return false;
+        }
+
+        return api;
     },
 
     verifyAPIKey: async(id: string, key: string): Promise<boolean> => {

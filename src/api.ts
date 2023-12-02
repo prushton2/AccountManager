@@ -94,8 +94,13 @@ apiRouter.get("/info/", async (req: any, res) => {
         return;
     }
 
-    // let api: API = await APIHandler.getAPI(req.query.apiid);
+    let api: API | false = await APIHandler.getAPI(req.query.apiid);
 
+    if(!api) {
+        res.status(400);
+        res.send({"response": "", "error": "No API Exists"});
+        return;
+    }
 
     res.status(200);
     res.send({"response": await APIHandler.getExternalFacingFilteredAPI(req.query.apiid), "error": ""});

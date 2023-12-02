@@ -51,16 +51,18 @@ accountRouter.post("/login/", async(req: any, res) => {
         return;
     }
 
-    let account: Account = await AccountHandler.getAccountByName(req.body.name);
-    let API: API = await APIHandler.getAPI(req.query.api);
+    let account: Account | false = await AccountHandler.getAccountByName(req.body.name);
+    let API: API | false = await APIHandler.getAPI(req.query.api);
     
+
+
     // if(!await APIHandler.verifyAPIKey(req.query.api, req.body.apikey)) {
     //     res.status(401);
     //     res.send({"response": "", "error": "Invalid Credentials"});
     //     return;
     // }
 
-    if(account == undefined) {
+    if(account == false || API == false) {
         res.status(401);
         res.send({"response": "", "error": "Invalid Credentials"})
         return;
