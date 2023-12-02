@@ -50,7 +50,7 @@ export const setDB = async() => {
         return false;
     }
     
-    client = new mongoDB.MongoClient(process.env.MONGO_DB_CONN_URL, { useNewUrlParser: true } as mongoDB.MongoClientOptions);
+    client = new mongoDB.MongoClient(process.env.MONGO_DB_CONN_URL);
     // const client: mongoDB.MongoClient = new mongoDB.MongoClient(process.env.MONGO_DB_CONN_URL);
     await client.connect();
 
