@@ -1,9 +1,9 @@
 import Express from "express";
 import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
-// import { CorsOptions } from "cors";
 import { setDB } from "./database";
 import * as mongoDB from "mongodb";
+import cors, { CorsOptions } from "cors";
 
 const app = Express();
 const port = 3000;
@@ -22,12 +22,12 @@ app.use(bodyParser.urlencoded({
 app.use(bodyParser.json());
 
 
-//soon (tm)
-// app.use( cors({
-//     origin: true,
-//     methods: ['GET','POST','DELETE','UPDATE','PUT','PATCH'],
-//     credentials: true
-// }));
+//the wait is over
+app.use( cors({
+    origin: true,
+    methods: ['GET','POST','DELETE','UPDATE','PUT','PATCH'],
+    credentials: true
+}));
 
 
 // process.on('uncaughtException', (err) => {
