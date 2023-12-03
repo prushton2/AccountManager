@@ -94,6 +94,12 @@ accountRouter.post("/info/", async (req: any, res) => {
         return;
     }
 
+    if(req.query.api == process.env.SERVICE_API_ID) {
+        res.status(200);
+        res.send({"response": await AccountHandler.getExternalFacingFilteredAccount(req.cookies.token.split(".")[0]), "error": ""});
+        return;
+    }
+
     if(!req.body.apikey) {
         res.status(400);
         res.send({"response": "", "error": "No API Key provided"});
