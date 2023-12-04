@@ -3,7 +3,7 @@ import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 import { setDB } from "./database";
 import * as mongoDB from "mongodb";
-import cors, { CorsOptions } from "cors";
+import cors from "cors";
 
 const app = Express();
 const port = 3000;

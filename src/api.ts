@@ -96,7 +96,7 @@ apiRouter.get("/info/", async (req: any, res) => {
 
     let api: API | false = await APIHandler.getAPI(req.query.apiid);
 
-    if(!api) {
+    if(api == false) {
         res.status(400);
         res.send({"response": "", "error": "No API Exists"});
         return;

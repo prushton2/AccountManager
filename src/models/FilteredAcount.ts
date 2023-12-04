@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb"
 
 //This is the account object without info that shouldnt be sent to the account owner
 export interface FilteredAccount {
+    _id: ObjectId,
     name: string,
     email: string,
     createdAt: number,

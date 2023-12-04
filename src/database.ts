@@ -89,6 +89,7 @@ export const AccountHandler = {
             return false;
         }
         let filteredAccount: FilteredAccount = {
+            _id: account._id,
             name: account.name,
             email: account.email,
             ownedAPIs: account.ownedAPIs,
