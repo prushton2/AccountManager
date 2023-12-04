@@ -105,6 +105,7 @@ export const AccountHandler = {
         }
 
         let externalFacingFilteredAccount: ExternalFacingFilteredAccount = {
+            _id: account._id,
             name: account.name,
             email: account.email,
             createdAt: account.createdAt
