@@ -96,7 +96,7 @@ accountRouter.post("/info/", async (req: any, res) => {
 
     if(req.query.api == process.env.SERVICE_API_ID) {
         res.status(200);
-        res.send({"response": await AccountHandler.getExternalFacingFilteredAccount(req.body.token.split(".")[0]), "error": ""});
+        res.send({"response": await AccountHandler.getFilteredAccount(req.body.token.split(".")[0]), "error": ""});
         return;
     }
 
