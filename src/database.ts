@@ -135,6 +135,19 @@ export const AccountHandler = {
         account.ownedAPIs.push(APIID);
 
         await collections.users.updateOne({_id: new ObjectId(userID)}, {"$set": {"ownedAPIs": account.ownedAPIs}});
+    },
+
+    modify: async (userID: string, field: "name" | "email" | "password", value: string) => {
+        let account = await AccountHandler.getAccount(userID);
+
+        if(!account) {
+            return false;
+        }
+
+        let updateObject: {name: string, password: string, email: string} = {name: account.name, email: account.email, password: account.password};
+        updateObject[field] = value;
+
+        await collections.users.updateOne({_id: new ObjectId(userID)}, {"$set": updateObject});
     }
 }
 

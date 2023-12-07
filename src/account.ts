@@ -131,8 +131,41 @@ accountRouter.get("/logout", async(req:any, res) => {
     return;
 })
 
-//create account
-//login
-//logout
-//delete account
-//reset password
+accountRouter.post("/modify", async(req: any, res) => {
+
+    if(!process.env.SERVICE_API_ID) {
+        res.status(500);
+        res.send({"response": "", "error": "No Service API ID Defined"});
+        return;
+    }
+
+    let account = await AccountHandler.getAccount(req.cookies.token.split(".")[0]);
+
+    if(!SessionHandler.verifySession(req.cookies.token, process.env.SERVICE_API_ID) || account == false) {
+        res.status(400);
+        res.send({"response": "", "error": "Invalid Login"});
+        return;
+    }
+
+    if(createHash('sha256').update(req.body.password).digest('hex') != account.password) {
+        res.status(401);
+        res.send({"response": "", "error": "Invalid Credentials"});
+        return;
+    }
+
+    //check if the users field is allowed to be modified
+    if(["name", "password", "email"].indexOf(req.body.field) == -1) {
+        res.status(400);
+        res.send({"response": "", "error": "Field not found"});
+        return;
+    }
+
+    if(req.body.field == "password") {
+        req.body.value = createHash('sha256').update(req.body.value).digest('hex');
+    }
+
+    await AccountHandler.modify(req.cookies.token.split(".")[0], req.body.field, req.body.value);
+
+    res.status(200);
+    res.send({"response": "Updated Field", "error": ""});
+})
