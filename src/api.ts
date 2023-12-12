@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { API } from "./models/API";
 import { APIHandler, AccountHandler, SessionHandler } from "./database";
-import { createHash, randomUUID } from "crypto";
 import { Account } from "./models/Account";
 export const apiRouter = Router();
 
